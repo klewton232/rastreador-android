@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ver dispositivo</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <style>#map{height:360px} body{font-family:system-ui;margin:16px}</style>
+</head>
+<body>
+  <h2>Última localização</h2>
+  <div id="info">Carregando…</div>
+  <div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+const params = new URLSearchParams(location.search);
+const deviceId = params.get('id');
+if(!deviceId){ document.getElementById('info').textContent = 'Faltou ?id=<deviceId> na URL'; }
+
+fetch('/last/' + deviceId).then(r=>r.json()).then(data=>{
+  const i = document.getElementById('info');
+  i.innerHTML = '<b>Device:</b> ' + data.deviceId +
+                ' • <b>Quando:</b> ' + new Date(data.ts).toLocaleString() +
+                ' • <b>IP:</b> ' + (data.ip||'') +
+                (data.lat && data.lng ? ' • <a target="_blank" href="https://www.openstreetmap.org/?mlat='+data.lat+'&mlon='+data.lng+'#map=16/'+data.lat+'/'+data.lng+'">Abrir no mapa</a>':'');
+
+  if(data.lat && data.lng){
+    const map = L.map('map').setView([data.lat, data.lng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    L.marker([data.lat, data.lng]).addTo(map).bindPopup('Último visto aqui').openPopup();
+  } else {
+    document.getElementById('map').innerHTML = '<p>Sem coordenadas (só IP). Tente abrir o agente e permitir localização.</p>';
+  }
+}).catch(()=>{
+  document.getElementById('info').textContent = 'Sem registros para este ID.';
+});
+</script>
+</body>
+</html>

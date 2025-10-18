@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agente simples</title>
+  <style>body{font-family:system-ui;margin:16px}input,button{padding:8px;border:1px solid #ccc;border-radius:8px}label{display:block;margin:8px 0 4px}.row{display:flex;gap:8px;align-items:center}</style>
+</head>
+<body>
+  <h2>Agente simples</h2>
+  <p>Preencha o servidor e o token do dispositivo. O agente enviará localização (se permitida) e IP agora e a cada 5 minutos.</p>
+  <label>URL do servidor</label>
+  <input id="srv" type="text" placeholder="http://localhost:3000" style="width:100%">
+  <label>Token do dispositivo</label>
+  <input id="tok" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" style="width:100%">
+  <div class="row" style="margin-top:8px">
+    <button id="save">Salvar</button>
+    <button id="send">Enviar agora</button>
+  </div>
+  <p id="status"></p>
+
+<script>
+const $ = id => document.getElementById(id);
+$('srv').value = localStorage.getItem('srv') || 'http://localhost:3000';
+$('tok').value = localStorage.getItem('tok') || '';
+
+$('save').onclick = ()=>{
+  localStorage.setItem('srv', $('srv').value);
+  localStorage.setItem('tok', $('tok').value);
+  $('status').textContent = 'Configurações salvas.';
+};
+
+async function send(){
+  const server = $('srv').value.trim();
+  const token = $('tok').value.trim();
+  const info = { href: location.href, ua: navigator.userAgent };
+  function post(lat,lng){
+    fetch(server + '/ping', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ lat, lng, note: JSON.stringify(info) })
+    }).then(r=>r.json()).then(j=>{
+      $('status').textContent = 'Enviado: ' + JSON.stringify(j);
+    }).catch(e=> $('status').textContent = 'Erro: ' + e.message);
+  }
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>post(pos.coords.latitude, pos.coords.longitude),
+      _=>post(null,null), {timeout:8000});
+  } else {
+    post(null,null);
+  }
+}
+$('send').onclick = send;
+send();
+setInterval(send, 5*60*1000);
+</script>
+</body>
+</html>
